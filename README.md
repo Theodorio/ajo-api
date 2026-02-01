@@ -1,9 +1,3 @@
-This is a fantastic foundation for a Fintech project! Rotating Savings and Credit Associations (ROSCAs) are a massive part of the African economy, and digitizing them with a **Triple-Ledger** system and a **Reputation Engine** is a smart, high-impact move.
-
-I’ve refactored your documentation to make it look professional, highly readable, and "investor-ready."
-
----
-
 # 🪙 Ajo - The Smart ROSCA Engine
 
 **Ajo** is a digitized, automated rotational savings platform designed to bring trust and transparency to communal banking. By combining traditional "Ajo/Esusu" mechanics with modern credit-scoring and automated debt recovery, Ajo eliminates the "trust gap" in peer-to-peer savings.
