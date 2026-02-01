@@ -1,0 +1,207 @@
+# Ajo - ROSCA Savings Platform
+
+A digitized, automated rotational savings platform (ROSCA) built with Node.js, Express, and MongoDB.
+
+## Features
+
+- **Triple-Ledger Wallet**: Available Balance, Vault (locked funds), Debt tracking
+- **Reputation Engine**: Trust Score (300-850), User Tiers (Bronze/Silver/Gold)
+- **Automated Rotation**: Payout engine with 1.5% platform fees
+- **Backstop Protection**: Insurance fund covers member defaults
+- **KYC Verification**: BVN/NIN validation, blacklist automation
+
+## Tech Stack
+
+- **Backend**: Node.js, Express
+- **Database**: MongoDB Atlas (Mongoose)
+- **Security**: JWT Authentication, Input Validation
+- **Payments**: Paystack Integration (coming soon)
+
+## Installation
+
+1. Clone the repo
+   ```bash
+   git clone https://github.com/YOUR_USERNAME/ajo-backend.git
+   cd ajo-backend
+
+2. Install dependencies
+   ```bash
+   npm install
+
+3. Create .env file with:
+
+    PORT=3000
+    MONGODB_URI=your_atlas_connection_string
+    JWT_SECRET=your_random_secret
+    
+| Method | Endpoint                  | Description             |
+| ------ | ------------------------- | ----------------------- |
+| POST   | `/api/users`              | Create user (KYC)       |
+| GET    | `/api/users`              | List users              |
+| POST   | `/api/circles`            | Create ROSCA circle     |
+| POST   | `/api/circles/join`       | Join circle             |
+| POST   | `/api/circles/contribute` | Make contribution       |
+| POST   | `/api/circles/payout`     | Process rotation payout |
+| GET    | `/api/circles`            | List circles            |
+
+Complete Usage example
+
+1. User Onboarding (KYC)
+Create a new user:
+
+curl -X POST http://localhost:3000/api/users \
+  -H "Content-Type: application/json" \
+  -d '{
+    "fullName": "Theodorio Oluwatobi",
+    "bvn": "12345678901",
+    "nin": "10987654321",
+    "phoneNumber": "+2348012345678",
+    "initialBalance": 50000
+  }'
+
+  The above code will create a user named Theodorio Oluwatobi, wuth all the necessary kyc information and a balanace of 50000 (Fifty thousand naira).
+
+
+  Response:
+  {
+  "_id": "697e6d15ddb69eb38a1c3af6",
+  "fullName": "Theodorio Oluwatobi",
+  "wallet": {
+    "availableBalance": "50000",
+    "vaultBalance": "0",
+    "debtBalance": "0"
+  },
+  "trustScore": 400,
+  "userTier": "Bronze",
+  "status": "Active"
+}
+
+The response shows he was created with the balance and he doesnt have any debt and we still trust him since his score is 400. Keep note of the userid(would be differ) as it will be used to add user to circles.
+
+
+2. Create weekly savings group:
+curl -X POST http://localhost:3000/api/circles \
+  -H "Content-Type: application/json" \
+  -d '{
+    "title": "Lagos Ajo",
+    "contributionAmount": 10000,
+    "frequency": "weekly"
+  }'
+
+The above commands create an ajo group with a title, amount meant to be contributed and the fequency(this allows daily,weekly and monthly)
+
+  {
+  "_id": "697e6f64926d4fa802ce4537",
+  "title": "Lagos Weekly Ajo",
+  "contributionAmount": "10000",
+  "status": "Forming",
+  "totalPot": "0"
+}
+
+The above command shows it wasa success and the status "forming" means no one has joined yet and the total pot is 0 because of that.(Keep note of the id)
+
+curl -X POST http://localhost:3000/api/circles/join \
+  -H "Content-Type: application/json" \
+  -d '{
+    "userId": "697e6d15ddb69eb38a1c3af6",
+    "circleId": "697e6f64926d4fa802ce4537"
+  }'
+
+  The command is too add user Theodorio to Lagos Ajo group 
+
+  You can stimulate again and add several users to the group
+
+4. Contribution
+
+curl -X POST http://localhost:3000/api/circles/contribute \
+  -H "Content-Type: application/json" \
+  -d '{
+    "userId": "697e6d15ddb69eb38a1c3af6",
+    "circleId": "697e6f64926d4fa802ce4537"
+  }'
+
+  The system will automatically debit Theodorio Oluwatobi the amount for contribution to add to Lagos Ajo Circle vault balance.
+
+
+
+
+5. Default system
+
+    we can stimulate if a user defaulted payments by:
+  
+  curl -X POST http://localhost:3000/api/circles/default \
+  -H "Content-Type: application/json" \
+  -d '{
+    "userId": "USER_ID_HERE",
+    "circleId": "CIRCLE_ID_HERE"
+  }'
+
+  Expected result
+  {
+  "message": "Theodorio defaulted. Debt: ₦10500, Status: Active"
+}
+
+The debt 10500....10,000 is the expected contribution while the 500 is the 5% fee for defaulters
+
+6. Payout
+ 
+ This is to trigger a payout to any random user in the pot
+
+curl -X POST http://localhost:3000/api/circles/payout \
+  -H "Content-Type: application/json" \
+  -d '{
+    "circleId": "697e6f64926d4fa802ce4537"
+  }'
+
+
+This is the expected payout result
+  {
+  "recipient": "Theodorio Oluwatobi",
+  "grossAmount": 30000,
+  "platformFee": 450,
+  "netPayout": 29550,
+  "withheldInVault": 5910,
+  "availableNow": 23640,
+  "backstopUsed": ,
+  "nextTurn": 1
+}
+
+The result shows Theodorio was paid 30k(a group of three users), we collected 1.5% plaform fees which is 450 we also collected 20% of 29550(netpayout) which is 5910 to be kept in a vault.
+
+7. Checking insurance balance
+
+curl http://localhost:3000/api/backstop
+
+
+8. Reset Database
+
+curl -X POST http://localhost:3000/api/reset
+
+
+
+Full Script (If you are lazy)
+
+# 1. Create 3 users
+USER1=$(curl -s -X POST http://localhost:3000/api/users -H "Content-Type: application/json" -d '{"fullName":"User 1","bvn":"11111111111","nin":"11111111111","phoneNumber":"+2348011111111","initialBalance":50000}' | grep -o '"_id":"[^"]*' | cut -d'"' -f4)
+USER2=$(curl -s -X POST http://localhost:3000/api/users -H "Content-Type: application/json" -d '{"fullName":"User 2","bvn":"22222222222","nin":"22222222222","phoneNumber":"+2348022222222","initialBalance":50000}' | grep -o '"_id":"[^"]*' | cut -d'"' -f4)
+USER3=$(curl -s -X POST http://localhost:3000/api/users -H "Content-Type: application/json" -d '{"fullName":"User 3","bvn":"33333333333","nin":"33333333333","phoneNumber":"+2348033333333","initialBalance":50000}' | grep -o '"_id":"[^"]*' | cut -d'"' -f4)
+
+# 2. Create circle
+CIRCLE=$(curl -s -X POST http://localhost:3000/api/circles -H "Content-Type: application/json" -d '{"title":"Test Ajo","contributionAmount":10000,"frequency":"weekly"}' | grep -o '"_id":"[^"]*' | cut -d'"' -f4)
+
+# 3. Join circle
+curl -X POST http://localhost:3000/api/circles/join -H "Content-Type: application/json" -d "{\"userId\":\"$USER1\",\"circleId\":\"$CIRCLE\"}"
+curl -X POST http://localhost:3000/api/circles/join -H "Content-Type: application/json" -d "{\"userId\":\"$USER2\",\"circleId\":\"$CIRCLE\"}"
+curl -X POST http://localhost:3000/api/circles/join -H "Content-Type: application/json" -d "{\"userId\":\"$USER3\",\"circleId\":\"$CIRCLE\"}"
+
+# 4. Contribute (User 1 & 2 pay, User 3 will default)
+curl -X POST http://localhost:3000/api/circles/contribute -H "Content-Type: application/json" -d "{\"userId\":\"$USER1\",\"circleId\":\"$CIRCLE\"}"
+curl -X POST http://localhost:3000/api/circles/contribute -H "Content-Type: application/json" -d "{\"userId\":\"$USER2\",\"circleId\":\"$CIRCLE\"}"
+
+# 5. Simulate default for User 3
+curl -X POST http://localhost:3000/api/circles/default -H "Content-Type: application/json" -d "{\"userId\":\"$USER3\",\"circleId\":\"$CIRCLE\"}"
+
+# 6. Process payout (User 1 receives)
+curl -X POST http://localhost:3000/api/circles/payout -H "Content-Type: application/json" -d "{\"circleId\":\"$CIRCLE\"}"
+
+echo "Test complete!"
